@@ -1,6 +1,6 @@
 ---
 title: "Getting StaRted"
-author: 'ECO 6416: Joshua L. Eubanks'
+author: 'ECO 6416'
 date: "Last Updated: `r Sys.Date()`"
 output: 
   html_document:
@@ -13,22 +13,130 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+Typically, I will show all the packages needed to compile this document here. For this document, I am going to layer them within the document 
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+# What is R?
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+R is a programming language designed for statistical analysis and data visualization. R can also be used as a general-purpose programming language, complete with a menu of data types, tools for conditional logic, repetition, functions and methods.
 
-```{r cars}
-summary(cars)
+
+
+
+# Uses of R
+
+There are many things you can do with R, but for our class, we should only focus on how data is viewed, how to use functions, utilize packages, and ways find help.
+
+## Basic Operations
+
+R can be used as a basic calculator.
+
+```{r basic}
+
 ```
 
-## Including Plots
+We can also store our operations into variables. We can reference those variables later.
 
-You can also embed plots, for example:
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r variables}
+
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+## Using Functions and Packages
+
+Using a function is simple. These are some built-in functions
+
+```{r functions}
+
+```
+
+## Installing and Using Packages
+
+Sometimes, you need to use functions outside of the built-in ones. For an example, let’s install the package swirl:
+
+`install.packages("swirl")`
+
+This command pulls and stores the package into your library. If you want to actually use it, you must pull it from your library:
+
+```{r swirl}
+
+```
+
+`swirl` is an important package for beginners because it will show you how to do the basics step by step.
+
+## Help
+
+Also if you need help with any commands, you can put a question mark before a command to understand how to use it.
+
+`?merge`
+
+You can also search by keywords: `??matrix`, `??"identity matrix"`
+
+## Handling Data
+
+For this example we are going to use one of the embedded datasets within R.
+
+```{r mtcars}
+
+```
+
+Looking at this output, you can see this dataframe has 32 rows, and 11 columns. You could also use the `dim(mtcars)` function
+We can do some basic operations on this dataframe.
+
+### Column Selection
+
+If you are interested in looking at the horsepower data for each one of these vehicles, you can simply do it two different ways:
+
+```{r columns}
+
+```
+
+### Selecting Rows
+
+You can simply select which row you wish by doing so:
+
+```{r rows}
+
+```
+
+### Selecting Row and Column
+
+You can bring both together.
+
+```{r slicing}
+
+```
+
+## Creating New Column
+
+You will often times need to transform one column into another. Suppose we want the square root of horsepower
+
+```{r}
+
+```
+
+If we want to add this column to the overall dataset, we will need to assign it.
+
+```{r}
+
+```
+
+# Getting Your Bearings
+
+A crucial part to using any software is that you are in the proper location. I typically think of folders within a computer as houses and the files are in each house. If you are in the wrong house, you cannot get the items in the other house.
+
+```{r}
+
+```
+
+One benefit of the project environment is that it guarantees that you are in a specific spot. If you need to change locations, you can easily do that as well using `setwd()`.
+
+An important thing to note is `\` vs `/`. Many languages use `\` to ignore the next action. This is called an escape character.
+
+
+# Importing Data
+
+Depending upon the filetype, you may need special packages in order to import the data. For this example, since it is an excel file, we will need to import a new package.
+
+```{r}
+
+```
