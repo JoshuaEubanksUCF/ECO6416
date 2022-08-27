@@ -1,0 +1,93 @@
+---
+title: "Basic Statistics in R"
+author: "ECO 6416"
+date: "`r Sys.Date()`"
+output: 
+    pdf_document:
+      toc: true
+      number_sections: true
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+```
+
+Here are all the packages needed to get started.
+
+```{r packages}
+library(gt)
+library(tidyverse)
+library(gtsummary)
+library(plotly)
+
+
+sessionInfo()
+```
+
+
+# Univariate Analysis
+
+In univariate analysis, we look at a single variable and describe 3 different things:
+
+- Center
+- Shape
+- Spread
+
+## Center
+
+Helps explain where the middle of the data is. This can be measured in 3 main ways. 
+
+### Mean
+
+```{r}
+grades <- c(78,79,80,81,82)
+
+mean(grades)
+```
+
+### Median 
+
+```{r}
+median(grades)
+```
+### Mode
+
+There isn't an easy way of doing this, so I created a function instead.
+
+```{r}
+getModes <- function(x) {
+  ux <- unique(x)
+  tab <- tabulate(match(x, ux))
+  ux[tab == max(tab)]
+}
+
+
+getModes(grades)
+```
+
+Since there is no value that occurs most frequently, they all show. Mode is rarely used.
+
+## Shape 
+
+
+
+# Optional - Fancier Output
+
+Check out this fun stuff! Makes things look much cleaner.
+
+## Summary Statistics
+
+Using our classic `mtcars` dataset.
+
+```{r}
+mtcars%>% select(mpg, cyl,hp) %>% 
+  tbl_summary(statistic = list(all_continuous() ~ c("{mean} ({sd})",
+                                                    "{median} ({p25}, {p75})",
+                                                    "{min}, {max}"),
+                              all_categorical() ~ "{n} / {N} ({p}%)"),
+              type = all_continuous() ~ "continuous2"
+  )
+```
+
+## Histograms
