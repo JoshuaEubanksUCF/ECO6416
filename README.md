@@ -3,4 +3,3 @@ Welcome to my repository! It is a great place for version control and distributi
 
 Once you understand GitHub, feel free to start in 01-GettingStaRted
 
-Now that you have GitHub installed. Check out the course.
