@@ -1,247 +1,80 @@
----
-title: "Basic Statistics in R"
-author: "ECO 6416"
-date: "`r Sys.Date()`"
-output: 
-  html_document:
-    toc: true
-    toc_float: true
-    number_sections: true
----
+# Script: BasicStatistics_Raw.R
+# Author: Joshua L. Eubanks (joshua.eubanks@ucf.edu)
+# Date: 28 Aug 2022
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
-```
-
-Here are all the packages needed to get started.
-
-```{r packages}
 library(gt)
 library(tidyverse)
 library(gtsummary)
 library(plotly)
 library(readxl)
 library(plotly)
-library(corrplot)
-
-
-
 
 sessionInfo()
-```
 
-
-# Univariate Analysis
-
-In univariate analysis, we look at a single variable and describe 3 different things:
-
-- Center
-- Shape
-- Spread
-
-## Center
-
-Helps explain where the middle of the data is. This can be measured in 3 main ways. 
-
-### Mean
-
-```{r}
 grades <- c(78,79,80,81,82)
-
 mean(grades)
-```
 
-### Median 
-
-```{r}
 median(grades)
-```
-### Mode
 
-There isn't an easy way of doing this, so I created a function instead.
-
-```{r}
 getModes <- function(x) {
   ux <- unique(x)
   tab <- tabulate(match(x, ux))
   ux[tab == max(tab)]
 }
 
-
 getModes(grades)
-```
-
-Since there is no value that occurs most frequently, they all show. Mode is rarely used.
-
-## Shape 
-
-For this, I am going to randomly generate 100 exam scores.
-
-```{r}
-
 grades <- rnorm(100,mean = 75, sd = 5 )
 hist(grades)
-```
 
-You can mess with the `breaks = ` arguement to get different numbers of bins.
-
-## Spread
-
-Let's look at a different dataset. Starwars character heights.
-
-
-```{r}
 var(starwars$height)
-```
 
-What happened? We have nulls in our data, so we cannot calculate the variance until we tell the system to ignore null values
-
-```{r}
 var(starwars$height, na.rm = TRUE)
 sd(starwars$height, na.rm = TRUE)
 IQR(starwars$height, na.rm = TRUE)
 range(starwars$height, na.rm = TRUE)
-```
 
-
-### Visualizing Spread
-
-You can visualize the spread as well this with a boxplot. 
-
-```{r}
 boxplot(starwars$height)
-```
 
-You can see that a lot of them fall outside of the fences.
-
-You could also visualize this with a histogram
-
-```{r}
 hist(starwars$height, breaks = "fd")
-```
 
-
-## Easier Way
-
-To get most of the items of interest, you can simply use the `summary()` function. The standard deviation nor the variance is displayed, so you would still need those.
-
-```{r}
 summary(mtcars)
-```
 
-# Bivariate Analysis
-
-When looking at 2 variables, we use correlation, scatterplots, and time series graphs.
-
-## Correlation
-
-```{r}
 cor(mtcars$mpg, mtcars$hp)
-```
 
-These are strongly negatively correlated. We might say, horsepower has a inverse relationship with mpg, or mpg has a negative relationship with horsepower.
-
-## Scatterplots
-
-We can also visualize this relationship with a scatterplot.
-
-```{r}
 plot(mtcars$hp, mtcars$mpg)
-```
 
-we can also make this look nicer with some labels
-
-```{r}
 plot(mtcars$hp, mtcars$mpg,
      main = "Scatterplot of Horsepower and Miles Per Gallon",
      xlab = "Horsepower",
      ylab = "Miles Per Gallon")
 
-```
-
-## Time series graphs
-
-Since the data we've seen thus far has been only cross section, let's bring in the data from the previous module. `Wealth1Percent.xlsx`
-
-
-```{r}
 Wealth1percent <- read_excel("../Data/Wealth1percent.xlsx",
                              col_types = c("date", "numeric","numeric"))
-```
 
-To add the trend line, we need to do something that we haven't discussed yet. Don't worry, I'll explain it in the next module.
-
-```{r}
 plot(Wealth1percent$quarter,Wealth1percent$Share, type = "l")
 abline(lm(Share ~ quarter, data = Wealth1percent),lty = 2)
-```
 
-
-
-# More Visual Displays!
-
-
-Here are some more ways to display data
-
-## Data Tables
-
-
-We can represent data in categorical fashion:
-
-```{r}
 table(starwars$hair_color)
-```
 
-Or quantitative
-
-```{r}
 bins <- seq(10,34,by = 2)
 
 mpg <- cut(mtcars$mpg,bins)
 
 table(mpg)
-```
 
-## Bar Charts
-
-
-
-```{r}
 n <- table(mtcars$gear)
 
 barplot(n,xlab="Number of Gears")
-```
 
-## Stem and Leaf Plots
-
-We can add `scale = 3` to make this line up properly
-
-```{r}
 stem(mtcars$hp, scale = 3)
-```
 
-
-
-# Fancier Output
-
-Check out this fun stuff! Makes things look much cleaner.
-
-## Table Output
-
-Categorical
-
-```{r}
 hair <- table(starwars$hair_color)%>% 
   data.frame()
 
 colnames(hair)[1] <- "Hair Color"
 
 gt(hair)
-```
 
-Or quantitative
-
-```{r}
 bins <- seq(10,34,by = 2)
 
 mpg <- cut(mtcars$mpg,bins)
@@ -250,14 +83,6 @@ table(mpg)%>%
   data.frame() %>% 
   gt()
 
-```
-
-
-## Summary Statistics
-
-Using our classic `mtcars` dataset.
-
-```{r}
 mtcars%>% select(mpg, cyl,hp) %>% 
   tbl_summary(statistic = list(all_continuous() ~ c("{mean} ({sd})",
                                                     "{median} ({p25}, {p75})",
@@ -265,42 +90,21 @@ mtcars%>% select(mpg, cyl,hp) %>%
                               all_categorical() ~ "{n} / {N} ({p}%)"),
               type = all_continuous() ~ "continuous2"
   )
-```
 
-## Histograms
-
-### ggplot
-
-```{r}
 ggplot(mtcars, aes(mpg))+ 
   geom_histogram(binwidth = 2,col = 'black', fill = 'darkblue', alpha = 0.75)+
   labs(title = 'Distribution of Miles Per Gallon', caption = "1974 Motor Trend US Magazine")+
   theme_bw()
-```
 
-### plot_ly
-
-Since this is an interactive graph, it will not show up in a .pdf file, but it is great to look at in an .html document.
-
-```{r}
 plot_ly(x = ~mtcars$mpg, type = "histogram", alpha = 0.6) %>% 
   layout(title = 'Distribution of Miles Per Gallon',
          xaxis = list(title = 'Miles Per Gallon'),
          yaxis = list(title = 'Count'))
-```
 
-## Boxplots
 
-I think the plotly version of a boxplot is superior since it is interactive.
-
-```{r}
 plot_ly(y = starwars$height, type = 'box', name = 'Height [cm]',text = starwars$name) %>% 
   layout(title = 'Distribution of Star Wars Character Heights')
-```
 
-## Correlation
-
-```{r}
 reduced <- mtcars %>% 
   select(mpg, hp, wt,qsec,disp,drat)
 
@@ -311,34 +115,14 @@ corrplot(cor(reduced),
          tl.srt = 45,
          addCoef.col = "black",
          diag = FALSE)
-```
 
-
-## Scatterplots
-
-### ggplot
-
-```{r}
 ggplot(starwars,aes(height, mass))+
   geom_point(color = 'gray40')+
   theme_bw()+
   labs(title = "Relationship between Mass and Height of Star Wars Characters")
-```
 
-
-### plotly
-
-```{r}
 plot_ly(starwars, y = ~mass, x = ~height, type = 'scatter',text = ~name, mode = "markers")
-```
 
-
-## Trends
-
-
-### ggplot
-
-```{r}
 ggplot(Wealth1percent, aes(quarter, Share))+
   geom_line(color = 'gray40',alpha = 0.75)+
   geom_smooth(method = "lm", se = F, color = 'darkblue', linetype = 'dashed')+
@@ -347,13 +131,7 @@ ggplot(Wealth1percent, aes(quarter, Share))+
        subtitle = 'from 1989-2022',
        x = "Date",
        y = "Share")
-```
 
-### plotly
-
-To add the trend line, it gets quite tricky. 
-
-```{r}
 model <- lm(Share~quarter,Wealth1percent)
 Trend <- predict(model,data = Wealth1percent$quarter)
 
@@ -361,7 +139,9 @@ plot_ly(Wealth1percent, x = ~quarter, y = ~Share, type = 'scatter', mode = 'line
 add_trace(y = ~Trend, name = 'Trend', mode = 'lines')
 
 
-```
+####### To create pdfs
 
-
-
+#     pdf_document:
+#         toc: true
+#          number_sections: true
+# always_allow_html: true

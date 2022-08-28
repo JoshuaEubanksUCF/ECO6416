@@ -1,0 +1,74 @@
+---
+title: "In Class Exercise 1"
+author: "ECO 6416"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(scipen = 999)
+
+library(readxl)
+library(gtsummary)
+library(tidyverse)
+library(plotly)
+
+```
+
+First, we are going to bring in two datasets. One is on CEO compensation for the IT industry (2019). The second is a reduced dataset about the sales price of tractors
+
+```{r datasets}
+CEO <- read_excel("../Data/CEOCompIT.xlsx")
+Tractor <- read_excel("../Data/TractorBivariate.xlsx")
+```
+
+# CEO Compensation
+
+## Summary Statistics
+
+```{r ceo summary}
+
+```
+
+## Histogram
+
+```{r hist ceo}
+
+```
+
+## Boxplot
+```{r base boxplot ceo}
+
+```
+
+
+# Tractor 
+
+## Summary Statistics
+
+```{r}
+
+```
+
+## Histogram
+
+```{r}
+
+```
+
+## Boxplot
+
+```{r}
+
+```
+
+## Scatterplot and Correlation
+
+```{r}
+
+```
+
