@@ -1,0 +1,94 @@
+---
+title: "In Class Exercise 2"
+author: "Joshua L Eubanks"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    code_folding: show
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(readxl)
+library(tidyverse)
+```
+
+# Wealth of 1 Percent
+
+This dataset was obtained from FRED which shows the share of total net worth held by the top 1%. It is represented over time.
+
+```{r wealth}
+
+```
+
+This gives us a range of data from the third quarter of 1989 to the first quarter of 2021
+
+## Time Series Plot
+
+
+```{r wealthplot , message=F}
+
+```
+
+
+## Time Series Regression
+
+We can see the trend in an upwards manner, let's see what the quarterly change in slope is:
+
+```{r wealth regression}
+
+```
+
+in this case, the share of wealth held by the top 1% is increasing by 0.05% each quarter.
+
+## Prediction
+
+Suppose we want to predict the share of wealth 2 quarters form now:
+
+```{r}
+
+```
+
+
+# Covid cases NYT
+
+This data was pulled for March 2020 for covid cases in the US
+
+```{r}
+
+```
+
+## Plot
+
+```{r}
+
+
+```
+
+## Regression
+
+```{r}
+
+```
+
+
+## Prediction
+
+What would be the predicted number of cases by April 15, 2020?
+
+```{r}
+
+```
+
+## Thing 2 
+
+On average, how many new cases of covid are there daily?
+
+```{r}
+
+
+```
+

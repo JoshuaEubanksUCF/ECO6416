@@ -1,0 +1,78 @@
+---
+title: "Basic Statistics in R"
+author: "ECO 6416"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+Here are all the packages needed to get started.
+
+```{r packages}
+library(readxl)
+
+sessionInfo()
+```
+
+# Data
+
+We will be using the First Class Mail Volume as the dataset
+
+```{r}
+mail <- read_excel("../Data/First Class Mail.xlsx")
+```
+
+# Cross Section
+
+## Scatterplots
+
+We can also visualize the relationship with a scatterplot.
+
+```{r}
+plot(mail$PopUSA, mail$FirstClVol,
+     main = "Scatterplot of Population and First Class Mail",
+     xlab = "Population",
+     ylab = "Mail Volume")
+```
+
+## Regression
+
+```{r}
+model_1 <- lm(FirstClVol ~ PopUSA, data = mail)
+model_1
+```
+
+## Thing 1 
+
+```{r}
+
+newPrediction <- data.frame(PopUSA = 300)
+
+predict(model_1,
+        newdata = newPrediction,
+        interval = "confidence",
+        level = .8)
+```
+
+## Thing 2
+
+```{r}
+model_1$coefficients[2]*10
+```
+
+
+## Time series graphs
+
+
+```{r}
+plot(mail$Time,mail$FirstClVol, type = "l")
+abline(lm(FirstClVol ~ Time, data = mail),lty = 2, col = "red")
+```
+
