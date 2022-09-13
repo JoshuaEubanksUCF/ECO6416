@@ -1,0 +1,205 @@
+---
+title: "Learning to Use Regression Analysis"
+author: "ECO 6416"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+Here are all the packages needed to get started.
+
+```{r packages}
+library(readxl)
+library(dplyr) # for pipe operator
+library(gt) # for fancier tables
+library(gtsummary) # for fancier summary statistics
+library(corrplot) # for fancier correlations
+library(car) # for easier scatterplots
+library(jtools) # for fancier regression output
+
+sessionInfo()
+```
+
+# Business Problem
+
+You’ve been hired to pick the best location for the next Woody’s restaurant. If you can explain gross sales as a function of location, you can use this equation to help pick the best spot.
+
+# Six Steps to Regression Analysis
+
+1. Review literature and develop a theoretical model
+
+2. Specify the model
+
+3. Hypothesize the expected signs of the coefficients
+
+4. Collect the data. Inspect and clean the data
+
+5. Estimate and evaluate the equation
+
+6. Document the results
+
+
+## Review the Literature and Develop the Theoretical Model 
+- From talking with experts at the firm, you realize that Woody’s restaurants are identical regardless of location. Lot size and location type (suburban, retail, residential) will not be influential in estimating a Woody’s location but may be useful if you were looking at a different restaurant chain.
+
+- Lastly, they convince you to define your dependent variable as the number of customers served measured by the number of checks given. They say this because consumption differences and price differences between locations is not as important.
+
+- Y = Number of checks handed out in the previous year
+
+## Specify the model
+
+- You produce 5 potential determinants of sales:
+  - Number of people near location
+  - Number of competitors near location
+  - Income level of individuals near location
+  - Number of cars passing the location daily
+  - Number of months since opened
+  
+- You decide to ignore the last two for the following reasons:
+  - It would be costly to collect the traffic data
+  - All other locations have been open long enough to establish a stable clientele
+  
+- As a result, you decide that these are your 3 explanatory variables:
+  - N = Number of direct competitors within a 2-mile radius
+  - P = Number of people living within a 3-mile radius
+  - I = Average household income of the population 
+
+So in total the regression equation looks like this:
+
+$$Y_{i} =\beta_{0} + \beta_{N}N_{i}+\beta_{P}P_{i} +\beta_{I}I_{i} +\varepsilon_{i}$$
+
+## Hypothesize the Expected Signs of the Coefficients
+
+From this linear function, you can then hypothesize the signs of the coefficients:
+
+- $\beta_{N}$ < 0: You would expect the number of customers to decrease as there are more competitors within the area (holding population and income constant)
+- $\beta_{P}$ > 0: You would expect the number of customers to increase as the number of people near a restaurant increases
+- $\beta_{I}$ weakly positive?: We might expect as income increases, more people will go out to eat more, however, it could also be the case that at higher-income areas, people would like to eat at a higher end restaurant
+
+## Collect the data. Inspect and Clean the Data
+
+- You are confident in the data for 3 reasons:
+  - Each manager measured the variables identically
+  - All restaurants were included
+  - All information is from the same year
+
+### Bringing in Data
+
+```{r bringing in data}
+woodys <- read_excel("../Data/Woodys.xlsx")
+```
+
+### Inspecting Data
+
+We can inspect the data types to make sure they make sense.
+
+```{r inspecting the data}
+str(woodys)
+```
+
+Check out a few rows as well
+
+```{r}
+head(woodys)
+tail(woodys, 2) # just to demonstrate additional args
+```
+
+
+### Summary Statistics
+```{r}
+summary(woodys)
+sd(woodys$Sales)
+sd(woodys$NCompetitor)
+sd(woodys$Population)
+sd(woodys$Income)
+
+```
+
+Fancier way:
+
+```{r}
+woodys %>%
+tbl_summary(statistic = list(all_continuous() ~ c("{mean} ({sd})",
+"{median} ({p25}, {p75})",
+"{min}, {max}"),
+all_categorical() ~ "{n} / {N} ({p}%)"),
+type = all_continuous() ~ "continuous2"
+)
+```
+
+### Correlation
+
+```{r}
+cor(woodys)
+```
+
+Fancier Way
+
+```{r}
+corrplot(cor(woodys),
+type = "lower",
+order = "hclust",
+tl.col = "black",
+tl.srt = 45,
+addCoef.col = "black",
+diag = FALSE)
+```
+
+
+
+### Visualize distribution and relationships of each variable
+
+```{r}
+scatterplotMatrix(woodys)
+```
+
+## Estimate and Evaluate the Equation
+
+```{r}
+model <- lm(Sales ~ NCompetitor + Population + Income, data = woodys)
+
+summary(model)
+```
+
+Fanicer output
+
+```{r}
+summ(model)
+```
+
+### Prediction
+
+Suppose we have a potential location with the following characterisitics:
+
+- NCompetitor = 4
+- Population = 90,000
+- Income = 20,000
+
+```{r}
+newPrediction <- data.frame(NCompetitor = 4,
+                            Population = 90000,
+                            Income = 20000)
+
+predict(model, newdata = newPrediction)
+```
+
+
+### Marginal Analysis
+
+```{r}
+model$coefficients["Population"]
+```
+
+This says with one additional person, you'll see an increase in 0.35 checks per year.
+
+## Document Results
+
+When you knit this document, it allows you to automatically put this all together.
+
