@@ -73,7 +73,7 @@ You’ve been hired to pick the best location for the next Woody’s restaurant.
 
 So in total the regression equation looks like this:
 
-$$Y_{i} =\beta_{0} + \beta_{N}N_{i}+β_{P}P_{i} +β_{I}I_{i} +\varepsilon_{i}$$
+$$Y_{i} =\beta_{0} + \beta_{N}N_{i}+\beta_{P}P_{i} +\beta_{I}I_{i} +\varepsilon_{i}$$
 
 ## Hypothesize the Expected Signs of the Coefficients
 
