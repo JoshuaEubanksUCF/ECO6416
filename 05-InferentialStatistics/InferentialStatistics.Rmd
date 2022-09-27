@@ -1,0 +1,139 @@
+---
+title: "Inferential Statistics"
+author: "ECO 6416"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+Here are all the packages needed to get started.
+
+```{r packages}
+library(readxl)
+
+
+sessionInfo()
+```
+
+# Univariate
+
+If we want to compare the mean of our sample and make a statement about the population, we can run a very simple t-test. We are going to use the motor trend dataset within R.
+
+```{r }
+
+t.test(mtcars$mpg)
+
+```
+
+This test shows that there is sufficient evidence to reject the null hypothesis and state that the average miles per gallon on a vehicle is different than zero.
+
+Not very surprising. If the average car had 0 miles per gallon, it wouldn't be a useful car.
+
+Let's try something different. Suppose the null hypothesis is that the population mean is:
+
+$$H_{0}: \mu = 22 $$
+and the alternative is:
+
+$$H_{A}: \mu \neq 22$$
+```{r}
+t.test(mtcars$mpg, mu = 22)
+```
+
+At the 95% confidence level, there is not sufficient evidence to claim that the mean miles per gallon is different than 22 mpg (fail to reject).
+
+Let's see how we can manipulate it so that we get statistical significance. Let's test this alternative hypothesis:
+
+$$H_{A}: \mu < 22$$
+
+```{r}
+t.test(mtcars$mpg, mu = 22, alternative = "less")
+```
+
+since we did a one-tail test, we cut the p-value in half. Now we get statistical significance. You can see how easy it is to manipulate results. 
+
+# Regression - First Class Mail Volume
+
+This one comes from previous exercises about first class mail volume and some potential factors from it. 
+
+
+```{r}
+mail <- read_excel("../Data/First Class Mail.xlsx")
+```
+
+Let's just dive right into the meat and potatoes. You can reference all the proper steps to do before this analysis in the previous content.
+
+## Hypothesis Testing
+
+```{r}
+model <- lm(FirstClVol ~ Time + PopUSA + Price, data = mail)
+
+regsummary <- summary(model) # I do this so that I can pull values later on
+
+regsummary
+```
+## Overall Model Significance
+
+Based on the results above, we can conclude at at least one of the coefficients are different than zero. You can simply look at the p-value in the above output, or find it this way:
+
+```{r}
+regsummary$fstatistic # To see what this results in
+
+pf(regsummary$fstatistic[1], regsummary$fstatistic[2], regsummary$fstatistic[3], lower.tail = FALSE)
+```
+
+## Individual t-test Results
+
+You can refer to this and see that Time and Population test statistically significant. This means that we have sufficient evidence in that the slopes of the coefficients are different than zero.
+
+What is interesting about this dataset is that we actually see a negative relationship between population and mail volume. Although this is statistically significant, we will not throw out our underlying theory. In this case, we will have to discuss this phenomenon later.
+
+There is insufficient evidence to conclude that the slope coefficient of price is different than zero in a two tailed test. 
+
+We might be able to see if it tests significant on a one-tailed test. We can justify a one tailed test because we have theory to support the claim that it should be negative (law of demand).
+
+```{r}
+regsummary$coefficients["Price",4]/2 #[,4] is the p-value
+```
+
+Still insufficient evidence at the 95% level, but at a confidence level of below $\approx$ 94% we would have statistically significant results.
+
+## Marginal Change Analysis
+
+Simply hand calculate it using the output. 
+
+### Bonus: Way to Calculate this automatically
+
+There are more complicated ways of getting marginal analysis done automatically. I am playing with building a function that does it automatically, so it is in beta form. It is assuming you have already built the summary object like I just did. You'll also have to check and make sure you can even do this type of analysis first. If it is not statistically significant, you cant do this analysis.
+
+
+```{r}
+thing2 <- function(summaryobject, independent, cv, change){
+  meanchange <- summaryobject$coefficients[independent,1]*change
+  moe <- summaryobject$coefficients[independent,2]*cv*change
+
+  print(paste0("The expected change due to a change in ", 
+               round(change,2),
+               " is ",
+               round(meanchange,2),
+               " give or take ",
+               round(moe,2),
+               "." ))
+  print(paste0("Put another way: As low as ",
+               round(meanchange - moe,2),
+               " and as high as ",
+               round(meanchange + moe,2),
+               "." ))
+  }
+
+
+thing2(regsummary,"Time", 2, 4)
+
+```
+
