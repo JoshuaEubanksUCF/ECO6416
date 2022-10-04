@@ -1,0 +1,100 @@
+---
+title: "Dummy Variables"
+author: "ECO 6416"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+Here are all the packages needed to get started.
+
+```{r packages}
+library(readxl)
+
+
+sessionInfo()
+```
+
+# Influences on SAT Scores
+
+Suppose you are interested in the determinants of SAT scores.
+
+```{r}
+sat <- read_xlsx("../Data/8SAT.xlsx")
+
+sat_86AP <- sat[,-1]
+```
+
+I am temporarily dropping the `AP` column because I want to demonstrate something first.
+
+With all the data, you decide to run a full model with all the independent variables. The `~.` is a nice trick. It includes all the remaining variables from the dataframe. 
+
+```{r}
+model_full <- lm(SAT ~., data = sat_86AP)
+
+summary(model_full)
+```
+## Interpreting Results
+
+Since Gender and GPA are the only ones that tested significant at the 95% level, let's analyze the coefficients. If a person's GPA increases by 1, SAT scores are expected to increase by 130 points, give or take 74 points. 
+
+In this case, Gender equaling 1 means that a female took the test. When interpreting, we would say that females score about 108 points higher than males give or take 60 points.
+
+## Prediction
+
+Let's predict a student's SAT score based on their characteristics. We could build a prediction dataframe and use that, but for simplicity, I am just going to grab a single row instead of building one.
+
+```{r}
+newPrediction <- sat[8,]
+
+predict(model_full, newdata= newPrediction, interval = "confidence")
+```
+
+## Partial F-Test
+
+Another question that might be asked is if including APMath and APEnglish reduced the SSE by a statistically significant amount. 
+
+We can run a reduced model, then compare the two using a partial F test. 
+
+### Building Reduced Model
+
+```{r}
+
+reduced_sat <- sat[,-(1:3)] # drops first 3 columns
+
+model_reduced <- lm(SAT ~. , data = reduced_sat)
+
+summary(model_reduced)
+```
+
+### Comparing Models
+
+Now we can compare the reduction in both models using a partial F test
+
+```{r}
+anova(model_reduced, model_full)
+```
+
+Neat! Including the two did reduce the SSE by a statistically significant amount, but independently, neither tested statistically significant.
+
+We could have also seen this if we used the `AP` column instead of breaking apart what AP subject was taken. 
+
+```{r}
+sat_AP <- sat[,-(2:3)]
+
+ap_model <- lm(SAT ~. , data = sat_AP)
+
+summary(ap_model)
+```
+
+This means, that if you took an AP course, you are likely to increase your SAT scores by 144 points, give or take 84 points.
+
+How is that possible? This simply means if you take an AP class, your scores are likely to increase, but there is no discernible difference between taking APMath, APEnglish, or both.
+
