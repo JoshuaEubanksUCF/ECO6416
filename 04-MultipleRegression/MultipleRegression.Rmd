@@ -168,10 +168,11 @@ model <- lm(Sales ~ NCompetitor + Population + Income, data = woodys)
 summary(model)
 ```
 
-Fanicer output
+Fancier output
 
 ```{r}
 summ(model)
+tbl_regression(model)
 ```
 
 ### Prediction
