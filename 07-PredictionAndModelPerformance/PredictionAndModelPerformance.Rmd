@@ -1,0 +1,143 @@
+---
+title: "Prediction and Model Performance"
+author: "ECO 6416"
+date: "`r Sys.Date()`"
+output: 
+  pdf_document:
+    toc: true
+    
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Here are all the packages needed to get started.
+
+```{r packages}
+library(readxl) # reading in excel file
+library(dplyr) # for pipe operator
+
+
+sessionInfo()
+```
+
+# Modeling College Football Attendance
+
+Let's bring in the College Football Attendance dataset:
+
+```{r}
+attend <- read_excel("../Data/College Football Attendance.xlsx")[,-1] #dropped names of teams
+```
+
+- AttendAv= Division I-A Football attendance (in thousands)
+- Top25CNN= No of times the team is ranked in top 25 by CNN ratings
+- Win%10Yr= Average winning percentage in the last 10 years
+- ProgAge= Age of the football program
+- Enrolmt=Total enrollment of students in the university (in thousands)
+
+## Split the Data
+
+To see how our model does before deploying it in the wild, we can use randomly omit some data, run the regression on the remaining, then calculate performance metrics on the data we omitted.
+
+```{r}
+set.seed(123456)
+
+index <- sample(seq_len(nrow(attend)), size = 5)
+
+train <- attend[-index,]
+test <- attend[index,]
+```
+
+Check the summary statistics:
+
+```{r}
+summary(train)
+summary(test)
+```
+
+
+## Run the Model
+
+```{r}
+
+model <- lm(AttendAv ~. , data = train)
+
+summary(model)
+```
+
+## Prediction of UCF Attendance
+
+Suppose we wanted to predict UCF attendance. Based off some basic googling, suppose UCF has the following:
+
+```{r}
+UCF <- data.frame(Top25CNN = 0, 
+                  WinPercentTenYr = 58,
+                  ProgAge = 43,
+                  Enrollmt = 70)
+
+predict(model, newdata = UCF,interval = "prediction")
+predict(model, newdata = UCF,interval = "confidence")
+
+```
+
+The point estimate is the same, but you can see the lower and upper bounds are wider. One thing to note here is that R did not identify this as extrapolation error. Other software may tell you about this.
+
+## Calculating Performance Measures
+
+Let's see how the model predicts on our test dataset.
+
+```{r}
+
+test$Prediction <- predict(model, newdata = test)
+
+```
+
+### Calculating Error
+
+Recall the formula for calculating error:
+
+$$Error = Forecasted - Actual$$
+```{r}
+test$error <- test$Prediction - test$AttendAv
+```
+
+### Bias
+
+The bias is simply the average of those errors
+
+```{r}
+mean(test$error)
+```
+
+On average, there is a negative bias (model under predicts attendance).
+
+### Mean Absolute Error
+
+```{r}
+test$error %>% 
+  abs() %>% 
+  mean()
+```
+
+### Root Mean Squared Error
+
+
+```{r}
+test$error^2 %>% 
+  mean() %>% 
+  sqrt()
+```
+
+### MAPE
+
+```{r}
+(test$error/test$AttendAv) %>% 
+  abs() %>% 
+  mean()
+```
+
+A MAPE less than 5% is considered as an indication that the forecast is acceptably accurate. A MAPE greater than 10% but less than 25% indicates low, but acceptable accuracy and MAPE greater than 25% very low accuracy, so low that the forecast is not acceptable in terms of its accuracy^[On the Relationship among Values of the Same Summary Measure of Error when it is used across Multiple Characteristics at the Same Point in Time: An Examination of MALPE and MAPE; Dr. David A. Swanson]
+
+If you had competing models, you would look at these metrics from both and decide on a model going forward.
