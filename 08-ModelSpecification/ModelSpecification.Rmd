@@ -1,0 +1,217 @@
+---
+title: "Model Specification"
+author: "ECO 6416"
+date: "`r Sys.Date()`"
+output: 
+  pdf_document:
+    toc: true
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Here are all the packages needed to get started.
+
+```{r packages}
+library(readxl) # reading in excel file
+library(car) # for vif function
+library(plotly) # for interactive visualizations
+sessionInfo()
+```
+
+# Datasets
+
+To demonstrate much of this, let's use some of the datasets we've already been using:
+
+```{r}
+mail <- read_xlsx("../Data/First Class Mail.xlsx")
+covid <- read_xlsx("../Data/Covid.xlsx")
+```
+
+Let's check some model assumptions.
+
+# Multicollinearity
+
+We can check how variables are related pairwise:
+
+```{r}
+cor(mail)
+```
+
+We may have some strongly correlated variables in this situation. Year, Price, and Population are all directly related. Additionally, we have perfect correlation on year and Time.
+
+If we were to ignore these signs and continue forward:
+
+```{r}
+mail_model <- lm(FirstClVol ~. , data = mail)
+
+summary(mail_model)
+```
+
+The model catches the perfectly correlated variables. Let's drop them and check the group-wise comparisons.
+
+```{r}
+mail_model <- lm(FirstClVol ~. , data = mail[,-1])
+
+vif(mail_model)
+
+```
+
+Those numbers are really high, so our model may be impacted by multicollinearity. Let's see:
+
+```{r}
+summary(mail_model)
+```
+
+Since year and population test significant, we see that it isn't impacting those variables, but it is most likely impacting the price coefficient.
+
+
+# Functional Form
+
+Assuming something is linear, when in fact, it isn't can cause issues as well.
+
+## Mail Volume
+
+We can see that there was a peak in mail volume
+
+```{r}
+plot(mail$Time,mail$FirstClVol, type = "l")
+```
+
+so a line is not best fit. Let's generate a different model
+
+```{r}
+mail$TimeSq <- mail$Time^2
+
+mail_model <- lm(FirstClVol ~. , data = mail[,-1])
+summary(mail_model)
+```
+
+We now have everything testing significant and our overall fit his increased, but we still have issues with the price coefficient. It test significant, but in the wrong direction. We still have issues here that need further investigation.
+
+
+## Covid Cases
+
+We know that covid cases were also non-linear.
+
+```{r}
+plot(covid$Day,covid$cases,type = "l")
+```
+
+so we can transform the dependent variable and get something linear:
+
+```{r}
+covid$lnCases <- log(covid$cases) 
+
+plot(covid$lnCases, covid$Day, type = "l")
+```
+
+
+```{r}
+
+covid_model <- lm(lnCases~Day, data = covid)
+summary(covid_model)
+```
+
+In March 2020, the number of COVID cases were increasing by 27.28% each day give or take 0.64%.
+
+# Orange Juice Demand
+
+The following data is from a Chicago-area chain called Dominick's. This data was collected in the 1990s and the data include weekly prices and sales (in number of cartons "moved") for 3 orange juice brands --- Tropicana, Minute Maid, Dominick's --- at 83 Chicagoland Stores, as well as an indicator, `feat`, showing whether each brand was advertised (in store or flyer) that week.
+
+```{r}
+oj <- read.csv("../Data/oj.csv") 
+```
+
+## Visualization
+
+```{r}
+brandcol <- c("green","red","gold")
+
+plot(oj$sales,oj$price, col=brandcol[oj$brand])
+```
+
+## Functional Forms
+
+You can see that the relationships between price and quantity demanded are nonlinear. We need to transform them first:
+
+```{r}
+oj$logPrice <- log(oj$price)
+oj$logmove <- log(oj$sales)
+
+plot(oj$logmove,oj$logPrice, col=brandcol[oj$brand])
+```
+
+## Omitted Variable Bias
+
+Suppose we ran this model instead:
+
+```{r}
+reg <- lm(log(sales) ~ log(price), data=oj)
+
+summary(reg)
+```
+
+This states that a 1% increase in price constitutes a 1.6% decrease in quantity demanded. This is elastic.
+
+Ignoring the fact that different brands have different demands will cause issues.
+
+```{r}
+reg <- lm(log(sales) ~ log(price) + brand, data=oj)
+
+summary(reg)
+```
+
+This states that a 1% increase in price constitutes a 3.3% decrease in quantity demanded. These are wildly different results.
+
+There is a flaw in both these models though. It assumes that price elasticity is the same regardless of brand. Let's fix that.
+
+## Interaction Terms
+
+```{r}
+reg_interact <-  lm(log(sales) ~ log(price)*brand, data=oj)
+
+summary(reg_interact)
+```
+
+We can essentially see 3 different demand equations, one for each brand. What if we assume that demand for the good changes if it is advertised?
+
+### More Interactions
+
+```{r}
+full_reg <- lm(log(sales) ~ log(price)*brand*feat, data=oj)
+
+summary(full_reg)
+```
+
+Now we essentially have 6 demand equations; two for each brand based on whether or not it was advertised. We can also view this as a table:
+
+```{r}
+b <- coef(full_reg)
+
+Ad <- c("Not Featured","Featured")
+Dominicks <- c(b["log(price)"],
+               b["log(price)"] + b["log(price):feat"])
+MinuteMaid <- c(b["log(price)"] + b["log(price):brandminute.maid"],
+                b["log(price)"] + b["log(price):brandminute.maid"] + b["log(price):feat"] + b["log(price):brandminute.maid:feat"]
+                )
+Tropicana <- c(b["log(price)"] + b["log(price):brandtropicana"],
+               b["log(price)"] + b["log(price):brandtropicana"] + b["log(price):feat"] + b["log(price):brandtropicana:feat"])
+
+
+data.frame("Advertising" = Ad,
+           "Dominicks" = round(Dominicks,digits = 1),
+           "MinuteMaid" = round(MinuteMaid,digits = 1),
+           "Tropicana" = round(Tropicana,digits = 1))
+```
+
+## Table explaining why ads confounded our brand elasticity estimates
+
+```{r}
+salestable <- tapply(exp(oj$logmove), oj[,c("feat","brand")], sum)
+mosaicplot(salestable,col=c("green","red","gold"))
+```
+
+Minute maid was featured more often than Tropicana. Since being featured leads to more price sensitivity, it lead to Minute maid appearing more price sensitive.
