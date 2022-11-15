@@ -103,16 +103,23 @@ plot(covid$Day,covid$cases,type = "l")
 so we can transform the dependent variable and get something linear:
 
 ```{r}
-covid$lnCases <- log(covid$cases) 
+covid$lnCases <- log(covid$cases)
+covid_model <- lm(lnCases~Day, data = covid)
 
-plot(covid$lnCases, covid$Day, type = "l")
+plot(covid$Day,covid$lnCases , type = "l")+
+  abline(covid_model, lty = "dashed", col = "red")
 ```
 
 
 ```{r}
-
-covid_model <- lm(lnCases~Day, data = covid)
 summary(covid_model)
+
+
+covid$Prediction <- exp(predict(covid_model, newdata = data.frame("Day" = covid$Day)))
+
+plot(covid$Day,covid$cases,type = "l")
+lines(covid$Day,covid$Prediction, lty = "dashed", col = "red")
+
 ```
 
 In March 2020, the number of COVID cases were increasing by 27.28% each day give or take 0.64%.
