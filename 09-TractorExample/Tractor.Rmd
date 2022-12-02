@@ -1,0 +1,337 @@
+---
+title: "Summary: Tractor Example"
+author: "ECO 6416"
+date: "`r Sys.Date()`"
+output: 
+  pdf_document:
+    toc: true
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Here are all the packages needed to get started.
+
+```{r packages}
+library(readxl) # reading in excel file
+library(car) # for vif function
+library(plotly) # for interactive visualizations
+library(gt) # for better looking tables
+library(gtsummary) # for better summary statistics
+
+```
+
+# Tractor Data Description
+
+The following data is of tractor sales and the characteristics of each tractor sold. It consists of 276 observations and 12 variables (4 quantitative and 8 categorical).
+
+- saleprice: The selling price of the tractor (in dollars)
+- horsepower: Horsepower of the engine
+- age: Age of the tractor sold
+- enginehours: Total running hours on the engine
+- diesel: Dummy varaible indicating whether or not the fuel used is diesel
+- fwd: Dummy variable indicating whether or not the tractor is forward or rear wheel drive
+- manual: Dummy variable indicating whether or not it is manual transmission or automatic
+- johndeere: Dummy variable indicating if the manufacter is John Deere
+- cab: Dummy variable indicating if there is a saftey cab
+- seasons: Indicator for spring, summer, winter with the default being fall
+
+We can pull in the data and look at the data:
+
+```{r}
+tractor <- read_xlsx("../Data/TractorRaw.xlsx")
+
+gt(head(tractor)) # the gt function only makes it look nicer
+```
+
+# Bad Practice
+
+
+
+If we ignore all our training, we may just run a model without considering the center, shape, and spread of all the variables.
+
+By simply running the model, we are also skipping the first step in regression analysis *reviewing literature and develop a theoretical model.* This ignores the possibility that there may be non-linear relationships between the independent and dependent variables.
+
+```{r}
+bad_model <- lm(saleprice ~., data = tractor)
+
+summary(bad_model)
+
+# or (fancy output)
+
+tbl_regression(bad_model,
+               estimate_fun =  ~style_sigfig(.x, digits = 4)) %>% as_gt() %>%
+  gt::tab_source_note(gt::md(paste0("Adjusted R-Squared: ",round(summary(bad_model)$adj.r.squared* 100,digits = 2),"%")))
+```
+
+One thing to note here. Our model states that John Deere tractors cost $13,710 more than the same tractor with a different name. To be thorough, I decided to check online for some tractors with similar characteristics. The true gap between brands was much smaller.
+
+## Assumption Testing
+
+When we ignore the proper steps, we saw how our model is over-valuing John Deere tractors. We know this is the case because we mis-specified the model. The plots below also show that some of the Gauss-Markov assumptions have been violated.
+
+```{r fig.height= 8, fig.width=8}
+
+par(mfrow=c(2,2))
+plot(bad_model)
+```
+
+In this example, the first plot titled "Residuals vs. Fitted," you should not see a true pattern. In this case, since there is a non-linear relationship, you've already violated a classical assumption.
+
+The second plot titled "Normal Q-Q" shows the assumption of a normally distributed dependent variable for a fixed set of predictors. If this were a 45-degree line upwards, we could verify this. Unfortunately we do not have it in this case.
+
+The third plot titled "Scale-Location" checks for homoskedasticity. If this assumption were not violated, you'd see random points around a horizontal line. In this case, it is upwards sloping, so you can see there is a "fanning out" effect.
+
+The last plot "Residuals vs. Leverage" keeps an eye out for regression outliers, influential observations, and high leverage points. (Do not worry about this last plot).
+
+# The Proper Practice
+
+If you were doing this on your own and didn't have a dataset, you would need to think about what variables could explain the variation in tractor prices. Since the data was already collected for you, you need to think about the relationships between the dependent varaible and the independent variables a.k.a *reviewing literature and develop a theoretical model.*
+
+## Potential Ideas
+
+Here are some thoughts that you may consider when looking at the relationships between independent and dependent variables.
+
+- Quadratic relationship between horsepower and sales price
+  -  Horsepower improves performance up to a limit, then extra power does not add value, only consumes more fuel.
+
+- Logarithmic relationship between horsepower and sales price
+  - Horsepower improves performance more in the lower horsepower range than in the higher horsepower range. There are still some benefits, but not nearly as much.
+
+You are not bound to only create variables, you can drop ones as well such as seasonality. 
+
+You could continue this with all the variables to test out different relationships. For this example, now that we've created two different models, we can start building.
+
+
+## Splitting the Data
+
+First we need to split the data into testing and training data. Let's pull 10 observations
+
+```{r}
+set.seed(123457)
+index <- sample(seq_len(nrow(tractor)), size = 10)
+
+train <- tractor[-index,]
+test <- tractor[index,]
+```
+
+## Summary Statistics
+
+```{r, message = FALSE}
+summary(train)
+
+
+# or 
+
+train %>% 
+  tbl_summary(statistic = list(all_continuous() ~ c("{mean} ({sd})",
+                                                    "{median} ({p25}, {p75})",
+                                                    "{min}, {max}"),
+                              all_categorical() ~ "{n} / {N} ({p}%)"),
+              type = all_continuous() ~ "continuous2"
+  )
+```
+
+One thing that is obvious here is that our dependent variable is skewed to the right. The mean is about 9 thousand dollars higher than the median and the standard deviation is high, and the range is from 1.5k to 200k. We may have outliers in our data.
+
+## Plots
+
+Since we can only look at the quantitative variables in a scatter-plot and histogram, we are going to exclude the others.
+
+```{r}
+scatterplotMatrix(train[,1:4])
+```
+
+From here you can see some non-linear relationships and non-normally distributed variables.
+
+## Data Transformation
+
+Let's take the natural logarithm of sales. Taking logs will bring outliers closer to the other tractor prices.
+
+```{r}
+par(mfrow=c(1,2))
+hist(train$saleprice) #before
+
+train$lnSalePrice <- log(train$saleprice)
+
+hist(train$lnSalePrice) #after
+
+```
+
+That is much better. We now have something closer to a normal distribution.
+
+### Plotting the relationships After Transformation
+
+```{r}
+scatterplotMatrix(train[,c(13,2,3,4)]) # grabbing lnSalesPrice
+```
+
+
+
+We can still see some nonlinearity between horsepower and sales price. It is hard to determine if it is logarithmic or quadratic.
+
+```{r}
+train$lnHorsepower <- log(train$horsepower)
+train$horsepowerSquared <- train$horsepower^2
+```
+
+We could look at engine hours as well and continue forward, for the sake of this document, I am going to skip that part.
+
+## Models
+
+Let's build some models and look at the regression coefficients.
+
+### Model 1: Horsepower with a logaritmic shape
+
+```{r}
+model_1 <- lm(lnSalePrice ~., data = train[,c(13,14,3:12)] ) #pulling only columns I want
+
+summary(model_1)
+
+# or
+
+tbl_regression(model_1,
+               estimate_fun =  ~style_sigfig(.x, digits = 4)) %>% as_gt() %>%
+  gt::tab_source_note(gt::md(paste0("Adjusted R-Squared: ",round(summary(model_1)$adj.r.squared* 100,digits = 2),"%")))
+```
+
+
+
+```{r}
+par(mfrow=c(2,2))
+plot(model_1)
+```
+
+These are improvements to these assumptions.
+
+
+## Model 2: Quadratic Relationship
+
+```{r}
+model_2 <- lm(lnSalePrice ~., data = train[,c(13,2:12,15)] ) #pulling only columns I want
+
+summary(model_2)
+
+# or
+
+tbl_regression(model_2,
+               estimate_fun =  ~style_sigfig(.x, digits = 4)) %>% as_gt() %>%
+  gt::tab_source_note(gt::md(paste0("Adjusted R-Squared: ",round(summary(model_2)$adj.r.squared* 100,digits = 2),"%")))
+```
+
+Since the coefficient of horsepower is so small, it is hard to tell that it is showing a quadratic relationship.
+
+```{r}
+par(mfrow=c(2,2))
+plot(model_2)
+```
+
+Comparing to the base model, these are improvements to these assumptions.
+
+
+
+## Performance
+
+First things first, we need to include the transformations to our dataset so that we can use them in our predictions.
+
+
+```{r}
+test$lnSalePrice <- log(test$saleprice)
+test$lnHorsepower <- log(test$horsepower)
+test$horsepowerSquared <- test$horsepower^2
+```
+
+```{r}
+test$bad_model_pred <- predict(bad_model, newdata = test)
+
+test$model_1_pred <- predict(model_1,newdata = test) %>% exp()
+
+test$model_2_pred <- predict(model_2,newdata = test) %>% exp()
+
+# Finding the error
+
+test$error_bm <- test$bad_model_pred - test$saleprice
+
+test$error_1 <- test$model_1_pred - test$saleprice
+
+test$error_2 <- test$model_2_pred - test$saleprice
+```
+
+### Bias
+
+```{r}
+# Bad Model
+mean(test$error_bm)
+
+# Model 1
+mean(test$error_1)
+
+# Model 2
+mean(test$error_2)
+```
+
+### MAE
+
+
+```{r}
+# I decided to create a function to calculate this
+
+mae <- function(error_vector){
+  error_vector %>% 
+  abs() %>% 
+  mean()
+}
+
+# Bad Model
+mae(test$error_bm)
+
+# Model 1
+mae(test$error_1)
+
+# Model 2
+mae(test$error_2)
+
+```
+
+### RMSE
+
+```{r}
+rmse <- function(error_vector){
+   error_vector^2 %>% 
+  mean() %>% 
+  sqrt()
+
+}
+
+# Bad Model
+rmse(test$error_bm)
+# Model 1
+rmse(test$error_1)
+
+# Model 2
+rmse(test$error_2)
+```
+
+### MAPE
+
+```{r}
+mape <- function(error_vector, actual_vector){
+  (error_vector/actual_vector) %>% 
+    abs() %>% 
+    mean()
+}
+
+# Bad Model
+mape(test$error_bm, test$saleprice)
+# Model 1
+mape(test$error_1, test$saleprice)
+
+# Model 2
+mape(test$error_2, test$saleprice)
+```
+
+### Summary of Performance Metrics
+
+Looking at these three models, the initial model was the worst performing (not surprising). Looking at the other two, the logarithmic relationship has lower bias, MAE, and MAPE. Model 2 has a lower RMSE meaning that there were not large prediction errors. Picking which model would depend on your time preference. If you are looking at the short-run, then Model 2. Model 1 if you are looking at the long-run.
