@@ -3,8 +3,6 @@
 
 <img src="Images/Octocat.png" width="500"/>
 
-Here is an example of a push
-
 GitHub is an online repository for storing software. 
 It is a safe location where you save successive versions of your code
 so that past versions of your code can be recovered,
