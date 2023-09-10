@@ -1,0 +1,76 @@
+---
+title: "Carnival Game"
+author: "Joshua L Eubanks"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    code_folding: show
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Building Example Dataset
+
+For this exercise, I am going to create the dataset within R.
+
+```{r data}
+people <- data.frame("Height" = c(5,9,13,12,10,11,8,9,10,12,11,9,10,12,8,9,10,15,13,11) + 60,
+                     "Weight" = c(140,157,205,198,162,174,150,165,170,180,170,
+                                  162,165,180,160,155,165,190,185,155))
+```
+
+# Strategy 1, Guess Average Weight Every Time
+
+```{r}
+guess  <-  mean(people$Weight)
+```
+
+If we guess the average weight `r guess`, how does do we perform? If we are within the 10 pounds $\pm 5lbs$ we win \$2. Otherwise, we lose \$2.  
+```{r}
+people$Strat_1_Error <- people$Weight - guess
+
+head(people, 5)
+```
+
+We can see that we created a new column which calculates how far off we were. Now let's see how much we made/loss
+
+```{r}
+people$Strat_1_GainLoss <- -2 # creating the default set of losses
+people$Strat_1_GainLoss[abs(people$Strat_1_Error) <= 5] <- 2 # finding and replacing all the ones in which we won with +2 instead
+```
+
+This may seem strange, but computationally speaking, it is much faster than looping through each element.
+
+```{r}
+sum(people$Strat_1_GainLoss)
+```
+
+`r sum(people$Strat_1_GainLoss)`. Not a great day. 
+
+
+# Strategy 2 Include height.
+
+```{r}
+model <- lm(Weight ~ Height, data = people)
+
+model
+```
+
+Now that we have a relationship between height and weight, we can make more informed predictions.
+
+```{r}
+people$Strat_2_Error <- people$Weight - predict(model, newdata = data.frame(Height = people$Height))
+
+people$Strat_2_GainLoss <- -2 # creating the default set of losses
+people$Strat_2_GainLoss[abs(people$Strat_2_Error) <= 5] <- 2 # finding and replacing all the ones in which we won with +2 instead
+
+head(people, 5)
+
+sum(people$Strat_2_GainLoss)
+```
+
+`r sum(people$Strat_2_GainLoss)`. Much better result. What other things can we do to get higher winnings?
