@@ -1,0 +1,23 @@
+"0","model_1
+"
+"1","
+Call:
+"
+"1",""
+"1","lm(formula = FirstClVol ~ PopUSA, data = mail)"
+"1",""
+"1","
+
+"
+"1","Coefficients:
+"
+"1","(Intercept)  "
+"1","     PopUSA  "
+"1","
+"
+"1","    -7.5008  "
+"1","     0.3059  "
+"1","
+"
+"1","
+"

@@ -1,0 +1,27 @@
+{
+    "id": "739216AB",
+    "path": "~/GitHub/ECO6416/03-SimpleRegression/SimpleRegression.Rmd",
+    "project_path": "SimpleRegression.Rmd",
+    "type": "r_markdown",
+    "hash": "0",
+    "contents": "",
+    "dirty": true,
+    "created": 1694564676117.0,
+    "source_on_save": false,
+    "relative_order": 1,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "12,32",
+        "scrollLine": "0",
+        "last_setup_crc32": "a3e4758322e527f5"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1694565862,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1694565875539,
+    "read_only": false,
+    "read_only_alternatives": []
+}
