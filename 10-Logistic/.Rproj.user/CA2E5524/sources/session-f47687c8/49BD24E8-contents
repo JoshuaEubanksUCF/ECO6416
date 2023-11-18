@@ -1,0 +1,341 @@
+---
+title: "Classification"
+author: "Joshua Eubanks"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r packages}
+library(pROC)
+library(rpart)
+library(rpart.plot)
+library(party)
+library(randomForest)
+library(e1071)
+
+#install.packages(c("pROC", "rpart","rpart.plot", "party","randomForest","e1071"))
+```
+
+# The Dataset
+
+This dataset comes from the UCI Machine Learning Server. It contains 699 samples where 458 are benign and 241 are malignant.
+
+The independent variables are from 1 to 10, 1 being the closest to benign. 
+
+
+```{r}
+loc <- "http://archive.ics.uci.edu/ml/machine-learning-databases/"
+ds <- "breast-cancer-wisconsin/breast-cancer-wisconsin.data"
+
+url <- paste0(loc,ds)
+
+breast <- read.table(url, sep= ",", header = FALSE, na.strings = "?")
+
+names(breast) <- c("ID",
+                   "clumpThickness",
+                   "sizeUniformity",
+                   "shapeUniformity",
+                   "marginalAdhesion",
+                   "singleEpithelialCellSize",
+                   "bareNuclei",
+                   "blandChromatin",
+                   "normalNucleoli",
+                   "mitosis",
+                   "class")
+
+df <- breast[-1] # dropping ID column
+
+df$class <- factor(df$class,levels = c(2,4), labels = c("benign","malignant"))
+
+set.seed(1234)
+
+train <- sample(nrow(df), 0.7*nrow(df))
+
+df.train <- df[train,]
+df.validate <- df[-train,]
+
+table(df.train$class)
+summary(df.validate$class)
+```
+
+# Logistic Regression
+
+This isn't a new concept, we use logistic regression to determine different probabilites.
+
+```{r}
+fit.logit <- glm(class ~., data = df.train, family = "binomial")
+
+summary(fit.logit)
+```
+
+## Evaluating the Model
+
+```{r}
+prob <- predict(fit.logit, df.validate, type = 'response')
+
+logit.pred <- factor(prob > 0.5, levels = c(FALSE,TRUE),
+                     labels = c("benign","malignant"))
+
+logit.perf <- table(df.validate$class, logit.pred, dnn = c("Actual","Predicted"))
+
+logit.perf
+```
+
+At this level, we have a confusion matrix.
+
+### ROC Curve
+
+Why did we choose 0.5 as the threshold value? Is there a better way to pick the threshold values? We can do so by looking at an ROC curve.
+
+```{r}
+
+my_roc <- roc(df.validate$class ~ prob, plot = TRUE)
+
+```
+
+The threshold that maximizes the sensitivity and specificity can be found by pulling it from the ROC object.
+
+```{r}
+coords(my_roc, "best", ret = "threshold")
+
+# or
+
+threshold <- my_roc$thresholds[which.max(my_roc$sensitivities + my_roc$specificities)]
+```
+
+Using the best threshold, let's see our results
+
+```{r}
+logit.pred.thresh <- factor(prob > threshold, levels = c(FALSE,TRUE),
+                     labels = c("benign","malignant"))
+
+logit.perf.thresh <- table(df.validate$class, logit.pred.thresh, dnn = c("Actual","Predicted"))
+
+logit.perf.thresh
+```
+
+
+
+## Reducing the model
+
+We can also do a stepwise regression instead to reduce some of the independent variables in the model.
+
+```{r}
+logit.fit.reduced <- step(fit.logit)
+
+```
+
+### Your turn to replicate ROC
+
+This section, I want you to replicate the previous ROC curve, but now with the reduced model. Also extract the optimal threshold cutoff.
+
+
+```{r}
+
+```
+
+# Decision Trees
+
+We create a bunch of binary splits to create different paths based on conditional arguements. We work our way down the tree and give our prediction.
+
+## Classical Decision Trees
+
+```{r}
+set.seed(1234)
+
+dtree <- rpart(class ~., data = df.train, method = 'class', parms = list(split = 'information'))
+
+prp(dtree, type = 2, extra = 104,fallen.leaves = T)
+
+
+
+```
+
+## Prediction
+
+```{r}
+dtree.pred <- predict(dtree, df.validate,type = "class")
+
+dtree.perf <- table(df.validate$class, dtree.pred, dnn = c("Actual","Predicted"))
+
+dtree.perf
+```
+
+
+### Pruning
+
+Overly complex trees can overfit the data. To help fit the tree to data outside of the model, we add a complexity parameter so that we do not overfit.
+
+```{r}
+plotcp(dtree)
+
+dtree$cptable
+
+dtree.pruned <- prune(dtree,cp = 0.018)
+
+prp(dtree.pruned, type = 2, extra = 104,fallen.leaves = T)
+```
+
+#### Your Turn Prediction
+
+Follow the prediction steps from before and see
+
+```{r}
+dtree.pruned.pred <- predict(dtree.pruned, df.validate,type = "class")
+
+dtree.pruned.perf <- table(df.validate$class, dtree.pruned.pred, dnn = c("Actual","Predicted"))
+
+dtree.pruned.perf
+```
+
+## Conditional Inference Tree
+
+Uses permutation tests to calculate the p-values for each branch. It starts with the smallest p-value and pick the most significant split.
+
+```{r}
+fit.ctree <- ctree(class ~., data = df.train)
+
+plot(fit.ctree)
+```
+
+### Prediction and Performance
+
+```{r}
+ctree.pred <- predict(fit.ctree, df.validate, type = 'response')
+
+ctree.perf <- table(df.validate$class, ctree.pred, dnn = c("Actual","Predicted"))
+```
+
+# Random Forests
+
+This may seem daunting, but in reality, it is simply a bunch of randomly generated decision trees. We can generate many trees using bootstrapping methods. We also randomly select the number of features we use to choose the root node and subsequent branches.
+
+```{r}
+set.seed(1234)
+
+fit.forest <- randomForest(class ~., data=df.train, na.action=na.roughfix, importance = TRUE)
+
+fit.forest
+```
+
+We can look at the variable importance as well
+
+```{r}
+importance(fit.forest,type = 2)
+```
+
+## Prediction
+
+Let's see how well it performed on the test data.
+
+```{r}
+forest.pred <- predict(fit.forest, df.validate)
+
+forest.perf <- table(df.validate$class, forest.pred, dnn = c("Actual","Predicted"))
+
+forest.perf
+```
+
+# Support Vector Machines
+
+What we do in this is slice the data into their respective classifications.
+
+```{r}
+set.seed(1234)
+
+fit.svm <- svm(class~., data=df.train)
+
+fit.svm
+```
+
+## Prediction and Performance
+
+```{r}
+svm.pred <- predict(fit.svm,na.omit(df.validate))
+
+svm.perf <- table(na.omit(df.validate)$class, svm.pred, dnn = c("Actual","Predicted"))
+
+
+```
+
+## Tuning the model
+
+- Gamma: Controls the shape of the model, higher values increase number of support vectors. Default is 1/(number of predictors)
+
+- Cost: Cost of making errors, higher costs can cause less mis-classifications, but higher overfit. Default is 1.
+
+We can create a range of values and use the tuning the model (aka. Grid Search)
+
+
+```{r}
+set.seed(1234)
+
+tuned <- tune.svm(class~., data = df.train,
+                  gamma = 10^(-6:1),
+                  cost = 10^(-10:10))
+tuned
+```
+
+We can then use the parameters to create the model
+
+```{r}
+set.seed(1234)
+
+fit.svm <- svm(class~., data=df.train, gamma = 0.01, cost = 1)
+
+fit.svm
+```
+
+### Prediction and Performance
+
+```{r}
+svm.pred <- predict(fit.svm,na.omit(df.validate))
+
+svm.perf <- table(na.omit(df.validate)$class, svm.pred, dnn = c("Actual","Predicted"))
+
+```
+
+# Model Selection
+
+Let's compare all the models. I am going to create a function that will look at all the models and calculate some measures.
+
+```{r}
+performance <- function(table, n = 4){
+  if(!all(dim(table) == c(2,2)))
+    stop("Must be a 2 x 2 table")
+  tn = table[1,1]
+  fp = table[1,2]
+  fn = table[2,1]
+  tp = table[2,2]
+  sensitivity = tp/(tp+fn)
+  specificity = tn/(tn+fp)
+  ppp = tp/(tp+fp)
+  npp = tn/(tn+fp)
+  hitrate = (tp+tn)/(tp+tn+fp+fn)
+  result <- paste0("Sensitivity = ", round(sensitivity,n),
+                   "\nSpecificity = ",round(specificity,n),
+                   "\nPositive Predictive Value = ", round(ppp,n),
+                   "\nNegative Predictive Value = ", round(npp,n),
+                   "\nAccuracy = ", round(hitrate,n))
+  cat(result)
+}
+```
+
+```{r}
+performance(logit.perf)
+performance(dtree.perf)
+performance(ctree.perf)
+performance(forest.perf)
+performance(svm.perf)
+
+```
+

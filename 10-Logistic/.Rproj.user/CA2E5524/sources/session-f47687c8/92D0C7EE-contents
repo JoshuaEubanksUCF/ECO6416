@@ -1,0 +1,89 @@
+---
+title: "Spam Example"
+author: "Joshua L. Eubanks (joshua.eubanks@ucf.edu)"
+date: '2022-07-20'
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+---
+
+This data is from a 4600 emails. We want to determine if the item is spam or not.
+
+# Bringing in the Data
+
+```{r}
+email <- read.csv("spam.csv")
+```
+
+# Fit the Full Model
+
+```{r}
+spammy <- glm(spam ~ ., data=email, family='binomial')
+
+```
+
+you don't need to worry about this warning. It says that some covariates are nearly perfect predictors.
+
+The data is from a guy who is named george and he works in a cs dept. 
+
+```{r}
+table(email$spam, email$word_george)
+table(email$spam, email$word_free)
+
+```
+
+
+# Interpreting the coefficients
+
+```{r}
+b <- coef(spammy)
+
+exp(b["word_george"]) # George => !SPAM
+exp(b["word_free"]) # Free => SPAM
+
+```
+
+
+# Plot
+
+```{r}
+plot(spammy$fit~email$spam, 
+	xlab="", ylab=c("fitted probability of spam"), 
+	col=c("navy","red"))
+
+```
+
+# Prediction
+
+```{r}
+predict(spammy, newdata=email[c(1,4000),])
+predict(spammy, newdata=email[c(1,4000),], type="response")
+```
+
+
+
+# Testing and Training
+
+Often times you want to test and train your model before you deploy it. If your sample size is large enough, you can pull out some of the observations, and use those to test your accurary of the model.
+
+```{r}
+leaveout <- sample(1:nrow(email), 1000) ## sample 1000 random indices
+
+# train the model WITHOUT these observations (-index removes those obs)
+spamtrain <- glm(spam ~ ., data=email[-leaveout,], family='binomial')
+# get the predicted probability of spam on the left out data
+pspam <- predict(spamtrain, newdata=email[leaveout,], type="response")
+# plot the OOS fit
+plot(pspam ~ email$spam[leaveout],
+	xlab="", ylab=c("predicted probability of spam"), 
+	col=c("navy","red"))
+
+```
+
+
+
+
+
+

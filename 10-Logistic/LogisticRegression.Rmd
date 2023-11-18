@@ -1,0 +1,238 @@
+---
+title: "Logistic Regression"
+author: "Joshua L. Eubanks (joshua.eubanks@ucf.edu)"
+date: '2023-11-18'
+output: 
+  html_document:
+    toc: true
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+You'll need these packages installed to run the code:
+`install.packages(c('AER', 'ggplot2' ,'robust', 'qcc'))`
+
+# What is Logistic Regression?
+
+Logistic regression models binary (0 or 1), (true or false) outcomes.
+
+Some examples are:
+
+- Will this person pay their bills or default?
+- Is this a positive or negative review?
+- Is the author a democrat or republican?
+- Will I pass or fail the class?
+
+You can even break down some numerical values to binary. Ex: will the company be profitable or at a loss?
+
+# Why do we need logistic regression?
+
+Suppose we use the student's pass or fail example.
+
+```{r}
+# Making some made up data
+
+set.seed(1234)
+studyHours <- rnorm(50, mean = 50, sd = 10)
+pass <- round(runif(50))
+
+students <- data.frame("pass" = pass,
+                       "Hours" = studyHours)
+students$pass[students$Hours >= 55] <- 1
+
+plot(students$Hours,students$pass)
+```
+
+In this case, what would happen if we ran a basic regression?
+
+```{r}
+fit <- lm(pass ~ Hours, data = students )
+
+summary(fit)
+```
+
+```{r}
+plot(x=students$Hours,y=students$pass,ylim=c(-.5,1.5),xlim=c(25,80))
+abline(fit)
+```
+
+Interpreting the coefficents doesn't make sense. Additionally, the fit goes outside the probability limits [0,1].
+
+What we can use is a logit link function:
+
+$p(y=1|x_{1}...x_{k}) = \frac{\exp[\beta_{0}+\beta_{1}x_{1}+...+\beta_{k}x_{k}]}{1+\exp[\beta_{0}+\beta_{1}x_{1}+...+\beta_{k}x_{k}]}$
+
+As you can see from this plot, we are bound between zero and one:
+
+```{r}
+x <- seq(from =-5, to = 5, by = .001)
+
+p <- exp(x)/(1+exp(x))
+
+plot(x,p,type = "l")
+```
+
+
+# Interpreting the coefficients
+
+With some algebra, we can write the regression equation as:
+
+$\log\left[\frac{p}{1-p}\right] = \beta_{0}+\beta_{1}x_{1}+...+\beta_{k}x_{k}$
+
+This means that the logistic regression is the **linear model for log odds**
+
+
+# Fitting the model
+
+```{r}
+fitStudent <- glm(pass ~ Hours, data = students, family = 'binomial')
+
+summary(fitStudent)
+```
+
+# Prediction 
+
+We can pass parameters into the predict function just as before. One thing to change is `type = "response"`. This will print out the probabilities instead of the log odds.
+
+```{r}
+students$Probability <- predict(fitStudent,
+                                newdata = data.frame("Hours" = students$Hours),
+                                type = "response")
+library(ggplot2)
+
+ggplot(data = students, aes(Hours,pass))+
+  geom_point()+
+  geom_line(data = students, aes(Hours,Probability), color = 'red')+
+  theme_bw()
+
+```
+
+# Affairs Example
+
+Let's load a dataset of information about peoples' engagement in extramarital affairs, anonymously collected, of course.
+
+```{r}
+data(Affairs, package = "AER")
+```
+
+Always start by investigating the properties of the dataset. Calculate the summary statistics.
+
+```{r}
+summary(Affairs)
+table(Affairs$affairs)
+```
+
+Notice that the majority report never having such an affair. Although, several report numbers as high as 12.
+
+To indicate faithfulness, create a binary outcome variable that indicates whether a subject has ever had an affair. 
+
+```{r}
+Affairs$ynaffair[Affairs$affairs > 0] <- 1
+Affairs$ynaffair[Affairs$affairs == 0] <- 0
+# Define this as a factor with two levels.
+Affairs$ynaffair <- factor(Affairs$ynaffair,
+                           levels = c(0, 1),
+                           labels = c("No", "Yes"))
+table(Affairs$ynaffair)
+```
+
+Start by fitting the full model, with all available variables.
+
+```{r}
+fit.full <- glm(ynaffair ~ gender + age + yearsmarried +
+    children + religiousness + education + occupation + rating,
+    data = Affairs, family = binomial())
+summary(fit.full)
+
+```
+
+Notice that several variables are not statistically significant. Consider removing one or more and fitting a reduced model. Normally, you would consider a sequence of small changes but for this demonstration, we will make one big change by dropping several variables.
+
+```{r}
+fit.reduced <- glm(ynaffair ~ age + yearsmarried +
+    religiousness + rating, data = Affairs, family = binomial())
+summary(fit.reduced)
+
+```
+
+Now all remaining variables are statistically significant. Compare the two candidate models and test for a statistically significant improvement in fit for the larger model.
+
+```{r}
+anova(fit.reduced, fit.full, test = "Chisq")
+```
+
+This jointly tests the exclusion of all the variables dropped in the change above. The high p-value suggests very little is lost by restricting the additional coefficients to zero, which is the same as excluding the variables.
+
+Now that we have settled on a model, consider the interpretation of the coefficients.
+
+```{r}
+coef(fit.reduced)
+```
+
+For a logistic regression, the change in estimated probability is approximately proportional, so check the exponential transformation of the coefficients.
+
+```{r}
+exp(coef(fit.reduced))
+```
+
+Now analyze the model predictions directly, which is a more reliable way to investigate the predictions of the model. First, generate a dataset of hypothetical values for the predictions. It includes one row for each level of the marital rating variable and the average values of the other variables.
+
+```{r}
+testdata <- data.frame(rating = c(1, 2, 3, 4, 5),
+    age = mean(Affairs$age), yearsmarried = mean(Affairs$yearsmarried),
+    religiousness = mean(Affairs$religiousness))
+```
+
+Calculate the probability of extramarital affair by marital ratings. 
+
+```{r}
+testdata$prob <- predict(fit.reduced, newdata = testdata,
+    type = "response")
+
+```
+
+The "response" type returns the predictions in terms of the probability that an affair would occur.
+
+```{r}
+testdata
+```
+
+
+For the selected values of the other variables, we can see that the probability of an affair increases as the marital rating declines. Now repeat the calculation for the age variable. The prediction dataset has average values of the other variable but selected levels of the age variable.
+
+```{r}
+testdata <- data.frame(rating = mean(Affairs$rating),
+    age = seq(17, 57, 10), yearsmarried = mean(Affairs$yearsmarried),
+    religiousness = mean(Affairs$religiousness))
+```
+
+Calculate probabilities of extramarital affair by age
+
+```{r}
+testdata$prob <- predict(fit.reduced, newdata = testdata,
+    type = "response")
+testdata
+
+```
+
+The probability of an affair decreases as people age.
+
+Let's tests the length of the marriage now.
+
+```{r}
+testdata <- data.frame(rating = mean(Affairs$rating),
+    age = mean(Affairs$age), yearsmarried = 1:5,
+    religiousness = mean(Affairs$religiousness))
+```
+
+Calculate probabilities of extramarital affair by years married.
+
+```{r}
+testdata$prob <- predict(fit.reduced, newdata = testdata,
+    type = "response")
+testdata
+
+```

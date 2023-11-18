@@ -118,6 +118,7 @@ On average, there is a negative bias (model under predicts attendance).
 test$error %>% 
   abs() %>% 
   mean()
+
 ```
 
 ### Root Mean Squared Error
@@ -127,6 +128,7 @@ test$error %>%
 test$error^2 %>% 
   mean() %>% 
   sqrt()
+
 ```
 
 ### MAPE
