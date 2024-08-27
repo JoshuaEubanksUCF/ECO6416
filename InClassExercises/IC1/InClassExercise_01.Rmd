@@ -1,0 +1,77 @@
+---
+title: "In Class Exercise 1"
+author: "ECO 6416"
+date: "`r Sys.Date()`"
+output: 
+  pdf_document:
+    toc: true
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+Here are all the packages needed to get started.
+
+```{r packages}
+library(readxl) # to read in xlsx files
+options(scipen = 999) # to remove scientific notation
+
+sessionInfo()
+```
+
+# National Park Visitor Data
+
+Go to Webcourses and download the `national_park_attendance.xlsx` file. Be sure to save the file in an easy to locate folder.
+
+
+```{r}
+parks <- read_xlsx("C:/Users/jo585802/Downloads/national_park_attendance.xlsx")
+```
+
+```{r}
+head(parks)
+```
+
+```{r}
+tail(parks)
+```
+## Dimensions of the Data
+
+Describe the three dimensions of the data in the above table (circle correct answers)
+
+- univariate / bivariate / multivariate
+
+- two categorical / two quantitative / one categorical one quantitative
+
+- cross section / time series
+
+## Confidence Interval
+
+```{r}
+summary(parks$`Number of Visitors, 2017`)
+sd(parks$`Number of Visitors, 2017`)
+```
+
+a) Give the output above, what is the best prediction of attendance at any park at the 95% level of confidence? Show the result as (low, high) and round to the nearest 100 thousand.
+
+\newpage
+
+b) How comfortable are you with your prediction? Justify your answer.
+
+\vspace{1in}
+
+## Choosing Measure of Center
+
+Which statistic provides the best measure of center? You can use the chart below to help.
+
+```{r}
+
+hist(parks$`Number of Visitors, 2017`, 
+     main = "Histogram of Number of Visitors, 2017",
+     xlab = "Number of Visitors, 2017")
+
+
+```
+
